@@ -1,24 +1,502 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>Crypto Trading Dashboard</title>
-    <meta name="description" content="Crypto Trading Dashboard — built on Replit. Update this description to reflect the app." />
-    <meta name="robots" content="index, follow" />
-    <meta property="og:title" content="Crypto Trading Dashboard" />
-    <meta property="og:description" content="Crypto Trading Dashboard — built on Replit. Update this description to reflect the app." />
-    <meta property="og:type" content="website" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Crypto Trading Dashboard" />
-    <meta name="twitter:description" content="Crypto Trading Dashboard — built on Replit. Update this description to reflect the app." />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Phase 1 — Market Observation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0A0D0C;
+    --panel:#121815;
+    --panel-raised:#161D19;
+    --border:#223028;
+    --text:#DCE8E2;
+    --text-dim:#6E8079;
+    --text-dimmer:#4A5651;
+    --safe:#4CFFA6;
+    --warn:#FF9B4A;
+    --danger:#FF5C5C;
+    --safe-dim: rgba(76,255,166,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);}
+  body{
+    font-family:'IBM Plex Sans',system-ui,sans-serif;
+    font-size:14px;
+    line-height:1.5;
+    min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace;}
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;font-weight:600;letter-spacing:0.01em;}
+  button{
+    font-family:inherit;background:var(--panel-raised);color:var(--text);
+    border:1px solid var(--border);border-radius:6px;padding:8px 14px;
+    cursor:pointer;font-size:13px;
+  }
+  button:hover{border-color:var(--text-dim);}
+  button:active{transform:translateY(1px);}
+  input{
+    font-family:'IBM Plex Mono',monospace;background:var(--bg);color:var(--text);
+    border:1px solid var(--border);border-radius:6px;padding:7px 10px;font-size:13px;
+  }
+  :focus-visible{outline:2px solid var(--safe);outline-offset:2px;}
+  .dim{color:var(--text-dim);font-weight:400;}
+  .up{color:var(--safe);}
+  .down{color:var(--danger);}
+
+  /* ---- Status bar ---- */
+  header.statusbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;border-bottom:1px solid var(--border);
+    position:sticky;top:0;background:var(--bg);z-index:10;
+    flex-wrap:wrap;gap:10px;
+  }
+  .brand{font-size:15px;letter-spacing:0.06em;text-transform:uppercase;}
+  .brand .dim{font-size:12px;letter-spacing:0.04em;}
+  .status-items{display:flex;align-items:center;gap:18px;font-size:12px;}
+  .status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:var(--text-dimmer);}
+  .status-dot.on{background:var(--safe);box-shadow:0 0 8px var(--safe);}
+  .status-dot.off{background:var(--danger);box-shadow:0 0 8px var(--danger);}
+  #settings-panel{
+    display:none;gap:8px;align-items:center;padding:10px 20px;
+    border-bottom:1px solid var(--border);background:var(--panel);font-size:12px;
+  }
+  #settings-panel.open{display:flex;}
+  #settings-panel input{width:260px;}
+
+  /* ---- Layout ---- */
+  main.layout{
+    display:grid;
+    grid-template-columns:300px 1fr;
+    grid-template-rows:1fr auto;
+    gap:1px;background:var(--border);
+    min-height:calc(100vh - 53px);
+  }
+  section, aside{background:var(--bg);padding:20px;}
+  aside.token-list-panel{grid-row:1 / 2;overflow-y:auto;max-height:calc(100vh - 53px);}
+  section.detail-panel{grid-row:1 / 2;}
+  section.social-feed{grid-column:1 / 3;grid-row:2 / 3;}
+
+  .panel-header{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;}
+  .panel-header h2{font-size:13px;text-transform:uppercase;letter-spacing:0.08em;}
+
+  /* ---- Token list ---- */
+  .token-row{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:10px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent;
+  }
+  .token-row:hover{background:var(--panel);}
+  .token-row.selected{background:var(--panel-raised);border-color:var(--border);}
+  .token-row .sym{font-weight:600;}
+  .token-row .src{color:var(--text-dimmer);font-size:11px;text-transform:uppercase;}
+  .token-row .price{font-family:'IBM Plex Mono',monospace;text-align:right;}
+
+  /* ---- Detail panel ---- */
+  .empty-state{
+    display:flex;flex-direction:column;gap:6px;align-items:flex-start;
+    color:var(--text-dim);padding:40px 4px;max-width:36ch;
+  }
+  .empty-state strong{color:var(--text);font-family:'Space Grotesk',sans-serif;}
+  #detail-content{display:none;}
+  #detail-content.open{display:block;}
+  .detail-title{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;}
+  .detail-title h2{font-size:22px;text-transform:none;letter-spacing:0;}
+  .detail-sub{color:var(--text-dim);font-size:12px;margin-bottom:18px;}
+
+  .chart-wrap{border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:14px;margin-bottom:20px;}
+  .chart-wrap svg{width:100%;height:160px;display:block;}
+  .chart-empty{color:var(--text-dimmer);font-size:12px;text-align:center;padding:60px 0;}
+
+  .safety-row{display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;}
+  .gauge-wrap{
+    border:1px solid var(--border);border-radius:8px;background:var(--panel);
+    padding:16px;text-align:center;flex:0 0 220px;
+  }
+  .gauge-wrap svg{width:200px;height:120px;}
+  .gauge-score{font-family:'IBM Plex Mono',monospace;font-size:28px;margin-top:-8px;}
+  .gauge-caption{color:var(--text-dimmer);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;}
+  .flags-col{flex:1 1 260px;min-width:220px;}
+  .flag-chip{
+    display:block;border:1px solid var(--border);border-left:3px solid var(--warn);
+    background:var(--panel);border-radius:0 6px 6px 0;padding:8px 12px;margin-bottom:8px;
+    font-size:12.5px;
+  }
+  .flag-chip.none{border-left-color:var(--safe);color:var(--text-dim);}
+  .checked-note{color:var(--text-dimmer);font-size:11px;margin-top:10px;line-height:1.6;}
+  .concentration{margin-top:14px;font-size:12px;color:var(--text-dim);}
+  .concentration b{color:var(--text);}
+  .ta-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;}
+  .ta-cell{border:1px solid var(--border);border-radius:8px;background:var(--panel);padding:12px 14px;display:flex;flex-direction:column;gap:4px;}
+  .ta-label{color:var(--text-dimmer);font-size:11px;text-transform:uppercase;letter-spacing:0.05em;}
+  .ta-value{font-size:19px;}
+  .ta-value.up{color:var(--safe);}
+  .ta-value.down{color:var(--danger);}
+
+  /* ---- Social feed ---- */
+  .feed-row{
+    display:grid;grid-template-columns:90px 1fr auto;gap:14px;align-items:baseline;
+    padding:9px 4px;border-bottom:1px solid var(--border);font-size:13px;
+  }
+  .feed-row:last-child{border-bottom:none;}
+  .feed-row .plat{color:var(--text-dimmer);font-size:11px;text-transform:uppercase;}
+  .feed-row a{color:var(--text);text-decoration:none;}
+  .feed-row a:hover{color:var(--safe);}
+  .feed-row .score{color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:12px;}
+
+  @media (max-width:860px){
+    main.layout{grid-template-columns:1fr;}
+    aside.token-list-panel{max-height:none;}
+    section.social-feed{grid-column:1;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important;transition:none !important;}
+  }
+</style>
+</head>
+<body>
+
+<header class="statusbar">
+  <div class="brand">Phase 1 <span class="dim">· Observation Only — No Wallet, No Trading</span></div>
+  <div class="status-items">
+    <span><span id="api-dot" class="status-dot"></span><span id="api-text" class="dim">connecting…</span></span>
+    <span class="dim mono" id="last-refresh">—</span>
+    <button id="refresh-btn" title="Refresh now">Refresh</button>
+    <button id="settings-btn" title="API connection">⚙</button>
+  </div>
+</header>
+
+<div id="settings-panel">
+  <label class="dim" for="api-base-input">API base</label>
+  <input id="api-base-input" type="text" value="http://localhost:8000" />
+  <button id="save-api-base">Connect</button>
+  <span class="dim">Points at your FastAPI service — change this once it's deployed.</span>
+</div>
+
+<main class="layout">
+  <aside class="token-list-panel">
+    <div class="panel-header"><h2>Tracked tokens</h2><span class="dim mono" id="token-count">0</span></div>
+    <div id="token-list">
+      <div class="empty-state">
+        <strong>Nothing tracked yet.</strong>
+        <span>The market-data collector writes here on its own schedule. Once it's running, tokens show up automatically — nothing to click.</span>
+      </div>
+    </div>
+  </aside>
+
+  <section class="detail-panel">
+    <div class="panel-header"><h2>Token detail</h2></div>
+    <div id="detail-empty" class="empty-state">
+      <strong>Select a token on the left.</strong>
+      <span>Its price history and on-chain safety reading will load here.</span>
+    </div>
+    <div id="detail-content">
+      <div class="detail-title">
+        <h2 id="detail-symbol">—</h2>
+        <span class="dim mono" id="detail-address">—</span>
+      </div>
+      <div class="detail-sub" id="detail-meta">—</div>
+
+      <div class="chart-wrap">
+        <svg id="price-chart" viewBox="0 0 600 160" preserveAspectRatio="none"></svg>
+        <div id="chart-empty" class="chart-empty" style="display:none;">No price history collected for this token yet.</div>
+      </div>
+
+      <div class="safety-row">
+        <div class="gauge-wrap">
+          <svg id="gauge-svg" viewBox="0 0 200 120"></svg>
+          <div class="gauge-score" id="gauge-score">—</div>
+          <div class="gauge-caption">Risk reading, 0–100</div>
+        </div>
+        <div class="flags-col">
+          <div id="flags-list"><span class="dim">Run a safety check to read mint/freeze authority for this token.</span></div>
+          <div id="concentration" class="concentration"></div>
+          <button id="run-safety-btn" style="margin-top:12px;">Run safety check</button>
+          <div class="checked-note" id="checked-note"></div>
+        </div>
+      </div>
+
+      <div class="panel-header" style="margin-top:24px;"><h2>Technical reading</h2><span class="dim" id="ta-points">—</span></div>
+      <div id="ta-grid" class="ta-grid">
+        <div class="ta-cell"><span class="ta-label">RSI (14)</span><span class="ta-value mono" id="ta-rsi">—</span></div>
+        <div class="ta-cell"><span class="ta-label">MACD hist.</span><span class="ta-value mono" id="ta-macd">—</span></div>
+        <div class="ta-cell"><span class="ta-label">Momentum (10)</span><span class="ta-value mono" id="ta-momentum">—</span></div>
+        <div class="ta-cell"><span class="ta-label">Volatility (20)</span><span class="ta-value mono" id="ta-volatility">—</span></div>
+      </div>
+      <div class="checked-note" id="ta-note"></div>
+    </div>
+  </section>
+
+  <section class="social-feed">
+    <div class="panel-header"><h2>Social feed</h2><span class="dim" id="feed-sub">recent mentions across tracked subreddits</span></div>
+    <div id="social-list">
+      <div class="empty-state">
+        <strong>No mentions collected yet.</strong>
+        <span>Needs REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET set on the social-collector service before anything lands here.</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function(){
+  const state = { apiBase: 'http://localhost:8000', tokens: [], selected: null, pollHandle: null };
+
+  const el = (id) => document.getElementById(id);
+  const fmtPrice = (n) => {
+    if (n === null || n === undefined) return '—';
+    if (n === 0) return '0';
+    if (n < 0.01) return '$' + n.toFixed(8).replace(/0+$/,'').replace(/\.$/,'');
+    if (n < 1) return '$' + n.toFixed(4);
+    return '$' + n.toLocaleString(undefined,{maximumFractionDigits:2});
+  };
+  const fmtTime = (iso) => {
+    if(!iso) return '—';
+    const d = new Date(iso);
+    const diffMin = Math.round((Date.now() - d.getTime())/60000);
+    if (diffMin < 1) return 'just now';
+    if (diffMin < 60) return diffMin + 'm ago';
+    if (diffMin < 1440) return Math.round(diffMin/60) + 'h ago';
+    return d.toLocaleDateString();
+  };
+
+  async function apiGet(path){
+    const res = await fetch(state.apiBase + path, { headers: {'Accept':'application/json'} });
+    if(!res.ok) throw new Error(path + ' → ' + res.status);
+    return res.json();
+  }
+
+  // ---- Status bar ----
+  async function refreshStatus(){
+    try{
+      const health = await apiGet('/health');
+      el('api-dot').className = 'status-dot on';
+      el('api-text').textContent = 'connected · phase ' + health.phase;
+    }catch(e){
+      el('api-dot').className = 'status-dot off';
+      el('api-text').textContent = 'not reachable at ' + state.apiBase;
+    }
+    el('last-refresh').textContent = new Date().toLocaleTimeString();
+  }
+
+  // ---- Token list ----
+  async function refreshTokens(){
+    let tokens = [];
+    try{ tokens = await apiGet('/tokens'); }catch(e){ return; }
+    state.tokens = tokens;
+    el('token-count').textContent = tokens.length;
+    const list = el('token-list');
+    if(tokens.length === 0){
+      list.innerHTML = '<div class="empty-state"><strong>Nothing tracked yet.</strong><span>The market-data collector writes here on its own schedule. Once it\'s running, tokens show up automatically — nothing to click.</span></div>';
+      return;
+    }
+    list.innerHTML = '';
+    tokens.forEach(t => {
+      const row = document.createElement('div');
+      row.className = 'token-row' + (state.selected && state.selected.address === t.address ? ' selected' : '');
+      row.innerHTML = `
+        <span>
+          <span class="sym">${t.symbol || '?'}</span><br/>
+          <span class="src">${t.latest_source || t.chain}</span>
+        </span>
+        <span class="price mono">${fmtPrice(t.latest_price_usd)}</span>`;
+      row.addEventListener('click', () => selectToken(t));
+      list.appendChild(row);
+    });
+  }
+
+  // ---- Detail: price chart ----
+  function drawChart(history){
+    const svg = el('price-chart');
+    svg.innerHTML = '';
+    el('chart-empty').style.display = history.length ? 'none' : 'block';
+    if(!history.length) return;
+    const prices = history.map(h => h.price_usd).reverse();
+    const min = Math.min(...prices), max = Math.max(...prices);
+    const range = (max - min) || (max || 1);
+    const w = 600, h = 160, pad = 8;
+    const pts = prices.map((p,i) => {
+      const x = pad + (i/(prices.length-1 || 1)) * (w - pad*2);
+      const y = h - pad - ((p - min)/range) * (h - pad*2);
+      return [x,y];
+    });
+    const lineD = 'M' + pts.map(p=>p.join(',')).join(' L');
+    const areaD = lineD + ` L${w-pad},${h-pad} L${pad},${h-pad} Z`;
+
+    const ns = 'http://www.w3.org/2000/svg';
+    const grad = document.createElementNS(ns,'linearGradient');
+    grad.setAttribute('id','areaGrad'); grad.setAttribute('x1','0'); grad.setAttribute('y1','0'); grad.setAttribute('x2','0'); grad.setAttribute('y2','1');
+    grad.innerHTML = '<stop offset="0%" stop-color="#4CFFA6" stop-opacity="0.35"/><stop offset="100%" stop-color="#4CFFA6" stop-opacity="0"/>';
+    const defs = document.createElementNS(ns,'defs'); defs.appendChild(grad);
+
+    const area = document.createElementNS(ns,'path');
+    area.setAttribute('d', areaD); area.setAttribute('fill','url(#areaGrad)'); area.setAttribute('stroke','none');
+    const line = document.createElementNS(ns,'path');
+    line.setAttribute('d', lineD); line.setAttribute('fill','none'); line.setAttribute('stroke','#4CFFA6'); line.setAttribute('stroke-width','2');
+
+    svg.appendChild(defs); svg.appendChild(area); svg.appendChild(line);
+  }
+
+  // ---- Detail: safety gauge ----
+  function polar(cx,cy,r,angleDeg){
+    const rad = (angleDeg) * Math.PI/180;
+    return [cx + r*Math.cos(rad), cy + r*Math.sin(rad)];
+  }
+  function arcPath(cx,cy,r,startDeg,endDeg){
+    const [sx,sy] = polar(cx,cy,r,startDeg);
+    const [ex,ey] = polar(cx,cy,r,endDeg);
+    const large = (endDeg-startDeg) > 180 ? 1 : 0;
+    return `M${sx},${sy} A${r},${r} 0 ${large} 1 ${ex},${ey}`;
+  }
+  function drawGaugeShell(){
+    const svg = el('gauge-svg');
+    const ns = 'http://www.w3.org/2000/svg';
+    svg.innerHTML = '';
+    const cx=100, cy=100, r=80;
+    // 180deg → 0deg sweep, drawn top-half using screen coords (180=left,270=top,360/0=right)
+    const zones = [
+      {from:180, to:240, color:'#4CFFA6'},
+      {from:240, to:300, color:'#FF9B4A'},
+      {from:300, to:360, color:'#FF5C5C'},
+    ];
+    zones.forEach(z=>{
+      const p = document.createElementNS(ns,'path');
+      p.setAttribute('d', arcPath(cx,cy,r,z.from,z.to));
+      p.setAttribute('fill','none'); p.setAttribute('stroke',z.color); p.setAttribute('stroke-width','12');
+      p.setAttribute('stroke-opacity','0.85'); p.setAttribute('stroke-linecap','round');
+      svg.appendChild(p);
+    });
+    const needle = document.createElementNS(ns,'line');
+    needle.setAttribute('id','gauge-needle');
+    needle.setAttribute('x1', cx); needle.setAttribute('y1', cy);
+    needle.setAttribute('x2', cx); needle.setAttribute('y2', cy-r+18);
+    needle.setAttribute('stroke','#DCE8E2'); needle.setAttribute('stroke-width','3'); needle.setAttribute('stroke-linecap','round');
+    needle.setAttribute('transform', 'rotate(-90 '+cx+' '+cy+')');
+    svg.appendChild(needle);
+    const hub = document.createElementNS(ns,'circle');
+    hub.setAttribute('cx',cx); hub.setAttribute('cy',cy); hub.setAttribute('r','5'); hub.setAttribute('fill','#DCE8E2');
+    svg.appendChild(hub);
+  }
+  function setGauge(score){
+    drawGaugeShell();
+    const needle = el('gauge-svg').querySelector('#gauge-needle');
+    const angle = -90 + (score/100)*180; // -90 at score 0 (points left), +90 at score 100 (points right)
+    needle.setAttribute('transform', `rotate(${angle} 100 100)`);
+    const scoreEl = el('gauge-score');
+    scoreEl.textContent = score;
+    scoreEl.style.color = score < 33 ? 'var(--safe)' : score < 66 ? 'var(--warn)' : 'var(--danger)';
+  }
+
+  // ---- Select + load a token ----
+  async function selectToken(t){
+    state.selected = t;
+    el('detail-empty').style.display = 'none';
+    el('detail-content').classList.add('open');
+    el('detail-symbol').textContent = t.symbol || '?';
+    el('detail-address').textContent = t.address;
+    el('detail-meta').textContent = `${t.chain} · first seen ${fmtTime(t.first_seen_at)} · last update ${fmtTime(t.latest_collected_at)}`;
+    el('flags-list').innerHTML = '<span class="dim">Run a safety check to read mint/freeze authority for this token.</span>';
+    el('concentration').innerHTML = '';
+    el('checked-note').textContent = '';
+    setGauge(0);
+    el('gauge-score').textContent = '—';
+    refreshTokens();
+
+    try{
+      const history = await apiGet(`/tokens/${t.chain}/${t.address}/history?limit=200`);
+      drawChart(history);
+    }catch(e){ drawChart([]); }
+
+    try{
+      const ta = await apiGet(`/tokens/${t.chain}/${t.address}/technical`);
+      renderTechnical(ta);
+    }catch(e){ renderTechnical(null); }
+  }
+
+  function fmtSigned(n, suffix){
+    if(n === null || n === undefined) return '—';
+    const sign = n > 0 ? '+' : '';
+    return sign + n.toFixed(suffix === '%' ? 2 : 6) + suffix;
+  }
+  function renderTechnical(ta){
+    el('ta-points').textContent = ta ? ta.data_points_used + ' snapshots' : '—';
+    const rsiEl = el('ta-rsi');
+    rsiEl.textContent = ta && ta.rsi_14 !== null ? ta.rsi_14 : 'not enough history';
+    rsiEl.className = 'ta-value mono' + (ta && ta.rsi_14 !== null ? (ta.rsi_14 > 70 ? ' down' : ta.rsi_14 < 30 ? ' up' : '') : '');
+
+    const macdEl = el('ta-macd');
+    macdEl.textContent = ta ? fmtSigned(ta.macd_histogram, '') : 'not enough history';
+    macdEl.className = 'ta-value mono' + (ta && ta.macd_histogram !== null ? (ta.macd_histogram > 0 ? ' up' : ' down') : '');
+
+    const momEl = el('ta-momentum');
+    momEl.textContent = ta ? fmtSigned(ta.momentum_10, '%') : 'not enough history';
+    momEl.className = 'ta-value mono' + (ta && ta.momentum_10 !== null ? (ta.momentum_10 > 0 ? ' up' : ta.momentum_10 < 0 ? ' down' : '') : '');
+
+    el('ta-volatility').textContent = ta && ta.volatility_20 !== null ? ta.volatility_20 : 'not enough history';
+    el('ta-note').textContent = ta ? ta.note : '';
+  }
+
+  async function runSafetyCheck(){
+    if(!state.selected) return;
+    const btn = el('run-safety-btn');
+    btn.textContent = 'Checking…'; btn.disabled = true;
+    try{
+      const s = await apiGet(`/tokens/${state.selected.chain}/${state.selected.address}/safety`);
+      setGauge(s.risk_score);
+      const flags = el('flags-list');
+      if(s.flags && s.flags.length){
+        flags.innerHTML = s.flags.map(f => `<div class="flag-chip">${f}</div>`).join('');
+      } else {
+        flags.innerHTML = '<div class="flag-chip none">No mint/freeze authority flags raised.</div>';
+      }
+      if(s.holder_concentration){
+        const c = s.holder_concentration;
+        el('concentration').innerHTML = `Top holder <b>${c.top_holder_pct}%</b> · top 5 <b>${c.top_5_pct}%</b> · top 10 <b>${c.top_10_pct}%</b> of supply <span class="dim">(includes LP/pool accounts — not itself a red flag)</span>`;
+      }
+      el('checked-note').textContent = 'Checked: ' + s.checked_only + '. ' + (s.note || '');
+    }catch(e){
+      el('flags-list').innerHTML = '<span class="dim">Couldn\'t reach the safety endpoint — is the API running?</span>';
+    }
+    btn.textContent = 'Run safety check'; btn.disabled = false;
+  }
+
+  // ---- Social feed ----
+  async function refreshFeed(){
+    let mentions = [];
+    try{ mentions = await apiGet('/social/mentions?limit=30'); }catch(e){ return; }
+    const list = el('social-list');
+    if(mentions.length === 0){
+      list.innerHTML = '<div class="empty-state"><strong>No mentions collected yet.</strong><span>Needs REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET set on the social-collector service before anything lands here.</span></div>';
+      return;
+    }
+    list.innerHTML = mentions.map(m => `
+      <div class="feed-row">
+        <span class="plat">${m.platform}</span>
+        <a href="${m.url}" target="_blank" rel="noopener">${(m.title||'').slice(0,110)}</a>
+        <span class="score">▲ ${m.score} · ${m.num_comments ?? 0} comments</span>
+      </div>`).join('');
+  }
+
+  async function refreshAll(){
+    await Promise.all([refreshStatus(), refreshTokens(), refreshFeed()]);
+  }
+
+  // ---- Wiring ----
+  el('refresh-btn').addEventListener('click', refreshAll);
+  el('run-safety-btn').addEventListener('click', runSafetyCheck);
+  el('settings-btn').addEventListener('click', () => el('settings-panel').classList.toggle('open'));
+  el('save-api-base').addEventListener('click', () => {
+    state.apiBase = el('api-base-input').value.replace(/\/$/,'');
+    refreshAll();
+  });
+  el('api-base-input').value = state.apiBase;
+
+  drawGaugeShell();
+  refreshAll();
+  state.pollHandle = setInterval(refreshAll, 60000);
+})();
+</script>
+</body>
 </html>
